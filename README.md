@@ -91,11 +91,31 @@ npm run dev        # http://localhost:5173 ，/api 代理到后端 8000
 
 ## 界面截图
 
-> 演示环境运行后补充截图，放至 `assets/screenshots/` 并替换下方占位即可。
+> 以下截图来自本地演示环境（Vue3 前端 + PostgreSQL 演示数据）。
 
-| 主界面（左右分栏 + 流式） | 检索排查页（时间轴） | 知识管理 / 录入 |
-|---|---|---|
-| ![主界面](assets/screenshots/main.png) | ![检索排查](assets/screenshots/trace.png) | ![知识管理](assets/screenshots/knowledge.png) |
+#### 智能问答（主界面：左右分栏 + 流式）
+![智能问答](assets/screenshots/chat.png)
+
+#### 知识库管理
+![知识库管理](assets/screenshots/knowledge.png)
+
+#### 知识录入
+![知识录入](assets/screenshots/entry.png)
+
+#### 检索链路（时间轴 + 多路排名）
+![日志链路](assets/screenshots/trace.png)
+
+#### 日志查询
+![日志查询](assets/screenshots/query_logs.png)
+
+#### 工单管理
+![工单管理](assets/screenshots/workorders.png)
+
+#### 故障看板
+![故障看板](assets/screenshots/dashboard.png)
+
+#### 向量看板
+![向量看板](assets/screenshots/vectors.png)
 
 ## 配置项
 

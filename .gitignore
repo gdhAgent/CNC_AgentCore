@@ -1,0 +1,41 @@
+# .gitignore —— CNC_AgentCore
+
+# 环境变量 + 密钥
+.env
+.env.docker
+*.env.local
+
+# .NET 标准
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+.claude/
+*.swp
+
+# 测试
+TestResults/
+coverage/
+*.trx
+*.coverage
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# AOT/发布
+publish/
+*.binlog
+
+# 日志
+*.log
+logs/
+
+# 公开仓库不含的本地开发内容（保留在本机，不入库）
+docs/
+tests/
+scripts/

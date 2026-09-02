@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    CNC_AgentCore Directory.Build.props
+    所有项目共用的 MSBuild 属性
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <!-- CA1710/1711：Domain 异常/实体名与 Python 及表名刻意对齐，不做重命名 -->
+    <!-- CA1510/1805/1822/1848/1861/1725/1873/1859：现代 API / 风格 / 微性能建议，不影响功能，整体抑制 -->
+    <NoWarn>$(NoWarn);CS1591;CA1707;CA1014;CA1710;CA1711;CA1510;CA1805;CA1822;CA1848;CA1861;CA1725;CA1873;CA1859</NoWarn>
+
+    <!-- AOT 友好 -->
+    <IsPackable>false</IsPackable>
+    <PublishAot Condition="'$(PublishAot)' == ''">false</PublishAot>
+
+    <!-- 编码 -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+  </PropertyGroup>
+</Project>

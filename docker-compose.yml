@@ -1,0 +1,71 @@
+# CNC_AgentCore (.NET 10) 独立自包含栈 —— DB(pgvector)+一次性迁移(psql)+api。
+# .NET app 不自动建库/迁移 → db-init 依序应用 db/migrations/001..007.sql，成功后才起 api。
+# 用法：
+#   cp .env.docker.example .env.docker        # 填真密钥
+#   docker compose --env-file .env.docker up -d --build
+#
+# 与本仓库 .env（开发用，单条 PG_CONNECTION_STRING 指向 127.0.0.1）隔离：compose 一律用
+# .env.docker 做变量插值并注入容器(env_file)。api 的 Npgsql DSN 由与 db 服务同一组变量拼装。
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DB:-cnc_kb}
+      POSTGRES_USER: ${PG_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${PG_SUPERPASSWORD:?PG_SUPERPASSWORD 缺失：先 cp .env.docker.example .env.docker}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cnc_kb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  db-init:
+    image: pgvector/pgvector:pg17
+    restart: "no"
+    entrypoint: ["/bin/sh", "/scripts/db-init.sh"]
+    environment:
+      PGHOST: db
+      PGPORT: ${PG_PORT:-5432}
+      PGUSER: ${PG_SUPERUSER:-postgres}
+      PGPASSWORD: ${PG_SUPERPASSWORD:?PG_SUPERPASSWORD 缺失：先 cp .env.docker.example .env.docker}
+      PGDATABASE: ${PG_DB:-cnc_kb}
+    volumes:
+      - ./db/migrations:/migrations:ro
+      - ./db-init.sh:/scripts/db-init.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: ${REGISTRY:-}cnc-agentcore-api:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      ASPNETCORE_URLS: "http://0.0.0.0:8000"          # 必须 0.0.0.0（仓库 .env 绑 localhost 且不进镜像）
+      ASPNETCORE_ENVIRONMENT: ${APP_ENV:-Production}
+      TZ: ${TZ:-Asia/Shanghai}
+      # 单条 Npgsql DSN：与 db 服务同一组变量拼装，密码只在一处维护
+      PG_CONNECTION_STRING: "Host=db;Port=${PG_PORT:-5432};Database=${PG_DB:-cnc_kb};Username=${PG_SUPERUSER:-postgres};Password=${PG_SUPERPASSWORD};Include Error Detail=true"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      # 打廉价 "/" 路由做存活（/health 含 LLM/embedding 探测，避免误判重启）
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  pgdata:

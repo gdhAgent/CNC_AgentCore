@@ -1,0 +1,36 @@
+# 密钥/本地环境 —— 永不进镜像
+.env
+.env.docker
+*.env.local
+samples/.env
+
+# 构建产物
+**/bin/
+**/obj/
+publish/
+
+# IDE / 工具
+.vs/
+.vscode/
+.idea/
+.claude/
+*.user
+*.suo
+
+# 不进镜像
+tests/
+docs/
+samples/
+TestResults/
+coverage/
+*.trx
+*.coverage
+
+# 源码控制 / 杂项
+.git/
+.gitignore
+CNC_AgentCore.slnx
+*.log
+logs/
+Thumbs.db
+.DS_Store

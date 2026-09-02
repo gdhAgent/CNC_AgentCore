@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CNC_AgentCore.Application\CNC_AgentCore.Application.csproj" />
+    <ProjectReference Include="..\CNC_AgentCore.Infrastructure\CNC_AgentCore.Infrastructure.csproj" />
+    <ProjectReference Include="..\CNC_AgentCore.Domain\CNC_AgentCore.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="ClosedXML" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 项目命名约定：保留 CNC_AgentCore 下划线风格；禁用 CA1707 -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>

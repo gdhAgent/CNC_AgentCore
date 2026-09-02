@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CNC_AgentCore.Api/CNC_AgentCore.Api.csproj" />
+    <Project Path="src/CNC_AgentCore.Application/CNC_AgentCore.Application.csproj" />
+    <Project Path="src/CNC_AgentCore.Domain/CNC_AgentCore.Domain.csproj" />
+    <Project Path="src/CNC_AgentCore.Infrastructure/CNC_AgentCore.Infrastructure.csproj" />
+  </Folder>
+</Solution>

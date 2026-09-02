@@ -1,7 +1,7 @@
 # CNC_AgentCore (.NET 10) —— Docker/Linux 发布手册
 
-独立自包含栈：`db`(pgvector/pgvector:pg17) → `db-init`(一次性 psql 迁移) → `api`(.NET Web API)。
-app 不自动建库/迁移，schema 由 `db-init` 依序应用 `db/migrations/001..007.sql`，成功后 api 才启动。
+独立自包含栈：`db`(pgvector/pgvector:pg17) → `api`(.NET Web API)。
+**schema 与演示主数据**由 db 服务在**空数据卷首次初始化**时自动导入 `db/cnc_kb.sql`（单文件：建表 + 演示主数据），导入完成、db 健康后 api 才启动。
 配置不用本仓库开发 `.env`，统一走 `.env.docker`。
 
 ## 快速开始
@@ -14,8 +14,8 @@ cp .env.docker.example .env.docker
 docker compose --env-file .env.docker up -d --build
 
 # 3) 查看状态 / 日志
-docker compose --env-file .env.docker ps          # db healthy / db-init exited 0 / api healthy
-docker compose --env-file .env.docker logs db-init   # 应显示 apply 001..007
+docker compose --env-file .env.docker ps          # db healthy / api healthy
+docker compose --env-file .env.docker logs db     # 首启可见导入 db/cnc_kb.sql
 docker compose --env-file .env.docker logs -f api
 ```
 
@@ -25,40 +25,37 @@ docker compose --env-file .env.docker logs -f api
 curl http://localhost:8000/                       # {"name":"CNC_AgentCore",...}
 curl http://localhost:8000/health                 # db/llm/embedding/rerank 探针（缺 key→skipped）
 
-# schema 是否就绪
-docker compose --env-file .env.docker exec db psql -U postgres -d cnc_kb -c "\dt kb.*"
-docker compose --env-file .env.docker exec db psql -U postgres -d cnc_kb -c "select 1 from ops.role_permissions limit 1"
+# 演示主数据是否已导入（应分别 ≈ 25 / 30 / 200）
+docker compose --env-file .env.docker exec db psql -U postgres -d cnc_kb -t -c \
+  "select 'alarms='||(select count(*) from kb.alarms)||' machines='||(select count(*) from ops.machines)||' workorders='||(select count(*) from ops.maintenance_logs)"
 ```
 
-## 登录账号与数据（重要）
+## 登录账号（重要）
 
-schema 迁移与 Python 版逐字节一致，**不含用户账号行**（006 只建 `ops.users` 表，007 只种权限矩阵）。
-要让 `.NET` 栈可直接登录，两种方式任选：
+`db/cnc_kb.sql` 含演示主数据、**不含登录账号**（避免仓库携带任何凭据）。两版密码哈希兼容，可用配套 **Python 版**脚本创建演示账号（一次即可，幂等）：
 
-1. 用同源 Python 项目的种子灌一次（两后端 PBKDF2 哈希格式兼容）：
-   在 `D:\project\CNC_Agent` 先 `docker compose --env-file .env.docker build backend`，再对着**本栈**的库执行：
-   ```bash
-   # 例子：把 A 镜像挂到 B 的 compose 网络，种子连到 B 的 db 服务（替换成实际项目/网络名）
-   docker run --rm \
-     --network <cnc_agentcore_default> \
-     -e PG_HOST=db -e PG_PORT=5432 -e PG_SUPERUSER=postgres \
-     -e PG_SUPERPASSWORD=<真密码> -e PG_DB=cnc_kb \
-     --entrypoint python cnc-kb-python-backend:latest scripts/seed_users.py
-   ```
-2. 真迁移场景：把 `api` 的 DSN 指向已填充的库（如现有 Python 栈），二者 schema 相同可直接复用数据——
-   在 `.env.docker` 里覆盖 `PG_CONNECTION_STRING`（同时让 db/db-init 指向外部即可）。
+```bash
+# 1) 在 CNC_Agent 仓库先构建 backend 镜像： docker compose --env-file .env.docker build backend
+# 2) 对着本栈的库执行（替换 <项目网络名> 与真实密码，例如 --network cnc_agentcore_default）
+docker run --rm \
+  --network <网络名，如 cnc_agentcore_default> \
+  -e PG_HOST=db -e PG_PORT=5432 -e PG_SUPERUSER=postgres \
+  -e PG_SUPERPASSWORD=<真密码> -e PG_DB=cnc_kb \
+  --entrypoint python cnc-kb-python-backend:latest scripts/seed_users.py
+```
+
+> 若不需要登录、只想看查询/检索界面：业务查询端点默认开放，主界面可直接使用演示数据。
 
 ## 停止 / 清理
 
 ```bash
 docker compose --env-file .env.docker down          # 停止，保留数据卷(pgdata)
 docker compose --env-file .env.docker down -v       # 连数据卷一起删（数据丢失！）
-docker compose --env-file .env.docker run --rm db-init   # 需要时手动重放迁移(幂等)
 ```
 
-## 多栈共存 / 上线
+> 想重建到初始演示状态：`down -v` 后再 `up`，db 会重新导入 `db/cnc_kb.sql`。
 
-与 Python 版同时跑：把 `.env.docker` 的 `BACKEND_PORT` 改不同端口（如 8001）。本 compose 未设顶层 `name:`，互不干扰。
+## 上线
 
 ```bash
 docker build -t <registry>/cnc-agentcore-api:<tag> --platform linux/amd64 .

@@ -3,7 +3,7 @@
 面向 **MES / 设备运维** 场景的工业垂直领域 **RAG + Agent** 系统：输入白话故障描述或报警码（如 `SV0401`），返回可溯源的原文片段与带引用编号的结构化 AI 分析。本仓库为 **ASP.NET Core（.NET 10）** 实现。
 
 > 同一产品另有 **Python (FastAPI)** 实现：🔗 [`CNC_Agent`](https://github.com/gdhAgent/CNC_Agent)
-> 两版共享同一套 PostgreSQL / pgvector 的 schema（`db/migrations/` 逐字节一致）与 API 口径，可对照查看不同技术栈下的实现与部署差异。
+> 两版共享同一套 PostgreSQL / pgvector 的 schema（由同一个 `db/cnc_kb.sql` 提供）与 API 口径，可对照查看不同技术栈下的实现与部署差异。
 
 ---
 
@@ -48,16 +48,16 @@ CNC_AgentCore/
 │  ├─ CNC_AgentCore.Domain/        领域实体与约定
 │  └─ CNC_AgentCore.Infrastructure/ 持久化（EF Core + Dapper + pgvector）、
 │                                    LLM/Embedding Provider、鉴权、健康检查
-├─ db/migrations/                  schema 迁移 001…007（与 Python 版一致，纯 SQL、幂等）
+├─ db/cnc_kb.sql                  单文件：建库建表 + 演示主数据（与 Python 版一致）
 ├─ samples/.env.example            配置模板（无真实密钥）
 ├─ assets/screenshots/             界面截图（演示后补充）
-├─ Dockerfile / docker-compose.yml / db-init.sh / DOCKER.md    容器化部署
+├─ Dockerfile / docker-compose.yml / DOCKER.md                容器化部署
 └─ CNC_AgentCore.slnx / Directory.Build.props / Directory.Packages.props
 ```
 
 ## 快速开始
 
-推荐 Docker 一键起 `PostgreSQL+pgvector` 与后端；schema 由 `db-init` 服务自动应用（本应用不内建迁移执行）。
+推荐 Docker 一键起 `PostgreSQL+pgvector` 与后端；schema 与演示数据由 db 服务首次启动时自动导入（本应用不内建迁移执行）。
 
 ### 方式一：Docker（推荐，含 Windows）
 
@@ -67,14 +67,17 @@ docker compose --env-file .env.docker up -d --build
 curl http://localhost:8000/health
 ```
 
-- `db-init` 会依序应用 `db/migrations/001..007.sql`，成功后才启动 `api`。
+- 首次启动（空数据卷）db 自动导入 `db/cnc_kb.sql`（建表 + 演示主数据），导入完成后才启动 `api`。
+- 默认不含登录账号：可用配套 Python 版 `scripts/seed_users.py` 创建演示账号（两版密码哈希兼容）。
 - 详细命令与账号说明见 [`DOCKER.md`](DOCKER.md)。
 
 ### 方式二：本地运行（需要 .NET 10 SDK + PostgreSQL 17 + pgvector）
 
 ```bash
 cp samples/.env.example .env           # 填写 PG_CONNECTION_STRING / JWT_SECRET / API Key
-# 先建 schema：psql 依序执行 db/migrations/001…007.sql（或用上方 Docker 的 db-init 服务跑一遍）
+# 建库并导入（cnc_kb.sql = 建表 + 演示主数据，库需先创建）
+createdb cnc_kb
+psql -U postgres -d cnc_kb -f db/cnc_kb.sql
 dotnet run --project src/CNC_AgentCore.Api
 ```
 
